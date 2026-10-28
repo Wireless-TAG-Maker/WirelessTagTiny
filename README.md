@@ -28,9 +28,11 @@ The manual checkout uses FQBNs such as `espressif:esp32:wt9932p4_tiny`.
 A generic ESP32 board selection does not provide the required `WT_*` variant
 configuration; the library reports an explicit compile error in that case.
 
-Library Manager registration is pending. Until it is listed, install the library
-repository ZIP with **Sketch > Include Library > Add .ZIP Library**, or clone this
-repository into your sketchbook's `libraries/WirelessTagTiny` directory.
+[Library Manager registration has been accepted](https://github.com/arduino/library-registry/pull/9516).
+Allow up to one day for the Arduino index to refresh, then search for
+`WirelessTagTiny` in Library Manager. Until it appears, install the library
+repository ZIP with **Sketch > Include Library > Add .ZIP Library**, or clone
+this repository into your sketchbook's `libraries/WirelessTagTiny` directory.
 Library Manager installs libraries, so the ESP32 core and TINY board definitions
 must be installed separately. There are no external Library Manager dependencies;
 `FS`, `SPI`, `SD`, and `SD_MMC` are supplied by the ESP32 core.
