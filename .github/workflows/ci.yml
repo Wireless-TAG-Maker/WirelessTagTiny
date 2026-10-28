@@ -71,8 +71,9 @@ jobs:
             hashFiles('sketchbook/hardware/espressif/esp32/package/package_esp32_index.template.json',
             'sketchbook/hardware/espressif/esp32/tools/get.py') }}
       - name: Install the core's checksum-verified official tools
-        working-directory: sketchbook/hardware/espressif/esp32/tools
-        run: python3 get.py
+        run: >-
+          python3 library/tests/install_core_tools.py
+          --core-path sketchbook/hardware/espressif/esp32
       - name: Prepare Arduino indexes
         run: |
           arduino-cli core update-index

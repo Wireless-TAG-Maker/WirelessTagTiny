@@ -113,6 +113,10 @@ so a bundled copy cannot replace the library under test. Build checks do not
 prove LED timing, USB enumeration, SD power, card reads, or physical operation.
 No firmware upload occurs in CI.
 
+The CI installer reads the selected core's package manifest, downloads only its
+SDK, RISC-V compiler and esptool over verified HTTPS, checks each archive's
+declared size and SHA-256, and uses the unchanged core installer to extract it.
+
 Library Manager checks can be run before submission:
 
 ```sh
