@@ -1,0 +1,6 @@
+#pragma once
+#define SOC_RMT_SUPPORTED 1
+#define SOC_SDMMC_HOST_SUPPORTED 1
+#define SOC_SDMMC_IO_POWER_EXTERNAL 1
+
+#define SOC_GPIO_PIN_COUNT 64

@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      library_manager:
+        description: Library Manager validation mode
+        type: choice
+        options: ['false', submit, update]
+        default: 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: arduino/arduino-lint-action@v3.0.0
+        with:
+          version: 1.3.0
+          project-type: library
+          compliance: strict
+          library-manager: ${{ inputs.library_manager || 'false' }}
+
+  compile-and-host:
+    if: github.event_name != 'workflow_dispatch' || inputs.library_manager == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ARDUINO_DIRECTORIES_DATA: ${{ github.workspace }}/arduino-data
+      ARDUINO_DIRECTORIES_DOWNLOADS: ${{ github.workspace }}/arduino-downloads
+      ARDUINO_DIRECTORIES_USER: ${{ github.workspace }}/sketchbook
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: library
+      - name: Check out the unmodified core with TINY board definitions
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Wireless-TAG-Maker/arduino-esp32
+          ref: codex/add-wireless-tag-tiny
+          path: sketchbook/hardware/espressif/esp32
+      - name: Host behavior checks against the actual external variants
+        run: >-
+          python3 library/tests/run_host_tests.py
+          --variants-dir sketchbook/hardware/espressif/esp32/variants
+      - name: Validate each board with the core's official script
+        working-directory: sketchbook/hardware/espressif/esp32
+        run: |
+          for board in c3 c5 p4 p4x p4c61 s31; do
+            bash .github/scripts/validate_board.sh "wt9932${board}_tiny"
+          done
+      - uses: arduino/setup-arduino-cli@v2.0.0
+        with:
+          version: 1.5.1
+      - name: Record the core revision and CLI version
+        run: |
+          git -C sketchbook/hardware/espressif/esp32 rev-parse HEAD
+          arduino-cli version
+      - name: Cache official tool download archives
+        uses: actions/cache@v6.1.0
+        with:
+          path: sketchbook/hardware/espressif/esp32/tools/dist
+          key: >-
+            ${{ runner.os }}-esp32-tools-${{
+            hashFiles('sketchbook/hardware/espressif/esp32/package/package_esp32_index.template.json',
+            'sketchbook/hardware/espressif/esp32/tools/get.py') }}
+      - name: Install the core's checksum-verified official tools
+        working-directory: sketchbook/hardware/espressif/esp32/tools
+        run: python3 get.py
+      - name: Prepare Arduino indexes
+        run: |
+          arduino-cli core update-index
+          arduino-cli lib update-index
+      - name: Compile the official board test and every library example
+        run: |
+          set -euo pipefail
+          library_path="$GITHUB_WORKSPACE/library"
+          core_path="$GITHUB_WORKSPACE/sketchbook/hardware/espressif/esp32"
+          for board in c3 c5 p4 p4x p4c61 s31; do
+            arduino-cli compile \
+              --fqbn "espressif:esp32:wt9932${board}_tiny" \
+              --build-path "$RUNNER_TEMP/wireless-tag-tiny/$board/CIBoardsTest" \
+              --jobs 2 --warnings all \
+              "$core_path/libraries/ESP32/examples/CI/CIBoardsTest"
+            for example in BoardInfo RGBButton SDCard; do
+              arduino-cli compile \
+                --fqbn "espressif:esp32:wt9932${board}_tiny" \
+                --library "$library_path" \
+                --build-path "$RUNNER_TEMP/wireless-tag-tiny/$board/$example" \
+                --jobs 2 --warnings all \
+                "$library_path/examples/$example"
+            done
+          done
